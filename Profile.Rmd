@@ -1,0 +1,268 @@
+---
+title: "Progress Report"
+author: "Aleksandr Pugachev"
+date: "May 16th, 2022"
+mainfont: Arial
+fontsize: 12pt
+output: 
+  html_document:
+    self_contained: no
+    
+---
+
+<style type="text/css">
+  body{
+  font-size: 14.6pt;
+}
+</style>
+
+
+
+During six months, the program served 186 individuals. Out of seven available outcomes for clients, 3 can be rated as in high demand. There were 110 goals opened to avoid eviction, 84 goals to obtain safe and affordable housing, and 64 - to increase the net worth. The rest of the goals have lower numbers of people enrolled - employment-1, financial well-being - 14, food security - 7, and housing vouchers - 4.  Such goals as employment, food security and housing vouchers have 100% achievement. Out of 14 enrolled for financial well-being, only 14 percent, or 3 clients, achieved the outcome. As for the top three goals, the highest percentage of achievement belongs to increase of net worth - 84 % or 52 clients achieved outcome, for eviction 41% or 45 person, 25% for housing or 21 clients. For more details, see the table below.
+
+
+```{r message=TRUE, warning=FALSE, include=FALSE, paged.print=TRUE}
+data<-read.csv("monitoringdata.csv")
+library(lubridate)
+library(tidyverse)
+
+data_1 <- data %>%
+  group_by(outcome, new_enrolled)%>%
+  count()
+
+data_2<-data_1 %>% group_by(outcome )%>%
+  summarise(Goals=sum(n))
+data_3<- xyz %>%
+  group_by(outcome, new_acheived)%>%
+  count()
+
+
+data_4<-data_3 %>% group_by(outcome)%>%
+  mutate(Acheived=sum(n)) %>%
+  distinct(outcome, Acheived)
+
+
+data_5<-merge.data.frame(data_3, data_4, by = "outcome")
+
+data_5$Percentage <-round(data_5$Acheived/data_5$Goals*100)
+
+
+```
+
+
+```{r , echo=FALSE}
+
+library(formattable)
+
+improvement_formatter <- formatter("span", style = x ~ formattable::style(font.weight = "bold", "font-size:19px",
+                          color = ifelse(x > 50, "#59A14F", ifelse(x < 0, customRed, "#EDC948"))), 
+                                   x ~ icontext(ifelse(x >=50 , "thumbs-up","thumbs-up"), x))
+
+
+output1<-formattable(data_5, align =c("c", "r","r", "c"), list(
+ `outcome` = formatter("span", style =~ style(color = "black", font.weight = "bold", "font-size:16px")), 
+            `Goals`= color_bar(customRed), 
+                                     `Acheived`= color_bar(customGreen),
+                                     Percentage = improvement_formatter))
+
+```
+
+
+Looking at gender and goals enrollment, 78 females or 28 % sought assistance with eviction, 44 females or 16% applied for increase of net worth. 51 females or 18% needed help with housing. As for males, 51 and 18% wanted to avoid eviction, 18 or 6% to increase of net worth, and 32 or 11% to obtain housing. About 4%, or 10 females, pursued the financial well-being vs 1% or 4 of males in the same field. The other two domains, employment and food security, had the lowest percentage of clients' enrolled.  For additional details, see the chart below.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, results='asis'}
+
+library(googleVis)
+op<-options(gvis.plot.tag='chart')
+
+output2<-data %>%
+  group_by(Gender, outcome) %>%
+  count() %>%
+  mutate(p=round((n*100)/281),1)
+
+Sankey<-gvisSankey(output2, from="Gender.x", to="outcome", weight="p",
+                     options=list(
+                      sankey="{link: {color: { fill: '#1A8763'} },
+                       node: { color: { fill: '#a61d4c' },
+                       label: { fontName: 'Times-Roman',
+                      fontSize: 16, color: 'black', bold: true} }}",
+                      width=690, 
+                      height=490))
+
+print(Sankey, "chart")
+
+```
+
+
+Looking at income and those who achieved the outcome, it can be noted that 28 clients made less than 10k, 12 clients reported incomes between 10K - 20K, 19 clients made between 20K-30K, 6 clients made between 30K-40K, and 7 made between 40K-50K. The graph below demonstrates the comparison of clients who achieved the outcome and those who didn't, based on income. 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE, results='asis' }
+library(googleVis)
+library(dplyr)
+op<-options(gvis.plot.tag='chart')
+
+output3<-data %>%
+  distinct(idPerson, .keep_all=TRUE) %>%
+  mutate(Income_group = dplyr::case_when(Income <= 10000~"under10000",
+      Income > 10001 & Income <= 20000 ~"10001-20000",
+      Income > 20001 & Income <= 30000 ~"20001 - 30000",
+      Income > 30001 & Income <= 40000 ~"30001 - 40000",
+      Income > 40001 & Income <= 50000 ~"40001 - 50000",
+      Income > 50001 & Income <= 60000 ~"50001 - 60000",
+      Income > 60001  ~"60001 plus")) %>%
+  group_by(Income_group, result)%>%
+  mutate(num=n()) %>%
+  pivot_wider(
+    names_from = result,
+    values_from =num,
+    values_fill= 0) %>%
+  arrange(desc(yes))
+
+columnchart<-gvisColumnChart(output3, 
+                   options = list('align'="center",
+                     title="Income of Clients Acheived Outcome or Not",
+                  width=1000, height=500,
+                  gvis.editor="Edit me!"))                            
+print(columnchart, "chart")
+
+```
+
+On average the program staff delivered 164 services per month. The fewest services were delivered in October 2021 - 121, and the most services were delivered in April 2022-229.  The chart below demonstrates services by month. 
+
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE, paged.print=FALSE, results='asis'  }
+library(lubridate)
+library(googleVis)
+library(dplyr)
+op<-options(gvis.plot.tag='chart')
+
+time<-read.csv("time.csv")
+time$month<-mdy(time$Date)
+time$month<-as.Date(time$month)
+time$Month_Yr <- format(as.Date(time$month), "%Y-%m")
+numberservices<-time %>% 
+  group_by(Month_Yr) %>%
+  summarise(service=n())
+
+bar<-gvisBarChart(numberservices, 
+                   options = list(
+                     title="Number Services Per Month",
+                  width=1000,
+                          height=500,
+                  gvis.editor="Edit me!"))                            
+
+print(bar, "chart")
+
+```
+
+
+The calendar chart shows the number of services per day. There is no clear pattern of any weekdays being busier than the others. The team delivers an average of 8.6 services per day, with minimum of 1 and maximum of 16. 
+
+
+
+
+```{r echo=FALSE, results='asis', message=FALSE, warning=FALSE, paged.print=FALSE}
+
+library(googleVis)
+
+output4<-time %>%
+  group_by(month) %>%
+  count()
+
+calendarchart<- gvisCalendar(output4, 
+                    datevar="month", 
+                    numvar="n",
+                    options=list(
+                      title="Number of Services Per Day",
+                      height=320, 
+                      width = 900,
+                        calendar="{yearLabel: { fontName: 'Times-Roman',
+                      fontSize: 32, color: '#1A8763', bold: true},
+                      cellSize: 16,
+                      cellColor: { stroke: 'red', strokeOpacity: 0.2 },
+                      focusedCellColor: {stroke:'red'}}"))
+print(output4, tag='chart')
+```
+
+
+The five top services include: case management - 449 or 37.1 %, permanent house placements - 421 or 34.1%, eligibility determinations - 115 or 9.5%, referrals 77 or 6.4%, rent payment - 39 or 3.2%. For additional details, see the pie chart below.
+
+
+
+```{r echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+
+
+
+piechart<-data %>% group_by(Service) %>%
+  summarise(count=n()) %>%
+  mutate(percent=(count/1209)*100) %>%
+  arrange(desc(count))
+
+Pie <- gvisPieChart(piechart,
+                    options = list(
+                      width=1200,
+                      height=400
+                    ))
+print(Pie, "chart")
+
+```
+
+
+
+For further analysis, several statistical tests were performed. First, the Chi- square test helps to discover the relationship between two categorical variables.  It determines if knowing the value of one variable helps to predict the value of another variable. The dataset has data on gender and outcome. So, the question addressed is: is there any relationship between gender and achievement of outcome in this case?
+
+
+From the plot, it seems that there is no obvious relationship between these two variables. There are several results presented; the focus is on the p-value which is displayed at the top (in the subtitle of the plot). As p>0.001, it can be concluded that gender and outcome achievements are independent.  
+
+
+
+```{r echo=FALSE, message=FALSE, warning=TRUE, paged.print=FALSE}
+library(ggstatsplot)
+library(ggplot2)
+
+# plot
+ggbarstats(
+  data = data,
+  x = Gender,
+  y = result) +
+  labs(caption = NULL) 
+
+```
+
+
+The dataset has binary variable (yes/no). A logistic regression was used to predict the outcome of the dependent variable based on the collected observations.  In this case, the result outcome (achieved/not achieved) is a dependent variable. Age, income, number of services, and number of family members are independent variables.  The general formular is Result =  Age+Income+Services+Family Members. The results from the table show that the number of services is a significant variable; the rest are not.
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
+
+model1 <- glm(
+  result~ Age.x + Income + Number.in.Household.x+service, 
+  data = p,
+  family=binomial(link="logit"))
+tab_model(model1)
+```
+
+
+Since logistic analysis does not provide a full picture, we explored the important variables that impact the outcome using the random forest technique. In additional to the variables used in the logistic analysis, some categorical variables as gender, ethnicity, family type, and disability will be added to the formular. 
+
+
+The result from the chart below demonstrates that number of services appears to have the most effect on outcome achievement; second place is shared between age and income, and type is located in fourth place. Gender is in last place, which seems consistent with the results of the chi-square test; there seems to be no relationship between gender and outcome.  
+
+
+```{r echo=FALSE, results='asis', message=FALSE, warning=FALSE}
+library(tidyverse)
+library(vip)
+library(ranger)
+
+Ifeatures <- ranger(result ~ ., data = data, importance = "permutation",
+               probability = TRUE)
+plot(Ifeatures$variable.important)
+
+```
